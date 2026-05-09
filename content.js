@@ -11,111 +11,113 @@
   }
 
   function injectCSS() {
-    if (document.getElementById('cai-ad-remover-css')) return;
+    if (document.getElementById('cai-nuke-css')) return;
     const style = document.createElement('style');
-    style.id = 'cai-ad-remover-css';
+    style.id = 'cai-nuke-css';
     style.textContent = `
-      [id^="div-gpt-ad-"],
-      [aria-label="Hirdetés" i],
-      [aria-label="Advertisement" i],
-      [aria-label="Ads" i],
-      iframe[src*="doubleclick.net"],
-      iframe[src*="googlesyndication.com"] {
+      [data-cai-nuked="true"] {
         display: none !important;
         visibility: hidden !important;
         opacity: 0 !important;
+        height: 0 !important;
+        width: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        position: absolute !important;
         pointer-events: none !important;
+        border: none !important;
       }
     `;
     document.documentElement.appendChild(style);
   }
 
   function removeCSS() {
-    const style = document.getElementById('cai-ad-remover-css');
+    const style = document.getElementById('cai-nuke-css');
     if (style) style.remove();
   }
 
-  function hideElement(el) {
-    if (!el || el.dataset.caiHidden) return;
-    el.dataset.caiHidden = 'true';
-    el.style.setProperty('display', 'none', 'important');
-    hiddenCount++;
-    notifyBackground();
-  }
+  function getOutermostAdBox(trigger) {
+    let current = trigger;
+    let bestWrapper = trigger;
 
-  function isSafeToHide(el) {
-    if (!el) return false;
-    if (el.tagName === 'BODY' || el.tagName === 'MAIN' || el.tagName === 'NAV') return false;
-    if (el.querySelector('main') || el.querySelector('nav') || el.querySelector('textarea')) return false;
-    if (el.querySelectorAll('a').length > 10) return false;
-    return true;
-  }
+    for (let i = 0; i < 7; i++) {
+      const parent = current.parentElement;
+      if (!parent) break;
 
-  function findSpecificWrapper(el) {
-    const labeled = el.closest('[aria-label="Hirdetés" i], [aria-label="Advertisement" i], [aria-label="Ads" i]');
-    if (labeled) return labeled;
+      const tag = parent.tagName;
+      if (tag === 'BODY' || tag === 'MAIN' || tag === 'NAV' || tag === 'ASIDE' || tag === 'SECTION') break;
+      
+      if (parent.id && !parent.id.includes('gpt-ad')) break;
+      if (parent.classList.contains('flex-1') || parent.classList.contains('grid')) break;
+      
+      if (parent.querySelector('textarea') || parent.querySelector('form')) break;
+      if (parent.querySelectorAll('img').length > 1) break;
+      if (parent.querySelectorAll('a, button').length > 4) break;
+      if (parent.textContent.length > 300) break;
 
-    let parent = el.parentElement;
-    if (parent && parent.classList.contains('w-full') && isSafeToHide(parent)) {
-        return parent;
+      if (parent.classList.contains('w-full') || parent.classList.contains('fixed') || parent.classList.contains('absolute')) {
+        bestWrapper = parent;
+        if (parent.classList.contains('fixed')) break;
+      }
+
+      current = parent;
     }
-    
-    return el;
+
+    return bestWrapper;
+  }
+
+  function nukeAd(trigger) {
+    if (!trigger) return;
+    const wrapper = getOutermostAdBox(trigger);
+    if (wrapper && wrapper.dataset.caiNuked !== "true") {
+      wrapper.dataset.caiNuked = "true";
+      hiddenCount++;
+      notifyBackground();
+    }
   }
 
   function scanDOM() {
     if (!isEnabled || !document.body) return;
 
-    const gptSlots = document.querySelectorAll('[id^="div-gpt-ad-"]');
-    gptSlots.forEach(slot => {
-      const target = findSpecificWrapper(slot);
-      if (isSafeToHide(target)) hideElement(target);
-    });
+    const triggers = document.querySelectorAll(
+      '[id^="div-gpt-ad-"], [style*="/in-house/"], iframe[src*="doubleclick.net"], iframe[src*="googlesyndication.com"]'
+    );
 
-    const inHouseBanners = document.querySelectorAll('[style*="/in-house/"]');
-    inHouseBanners.forEach(banner => {
-      const target = findSpecificWrapper(banner);
-      if (isSafeToHide(target)) hideElement(target);
-    });
-
-    const labels = document.querySelectorAll('p, span, button');
-    labels.forEach(label => {
-        const txt = label.textContent.trim().toLowerCase();
-        if (txt === 'hirdetés' || txt === 'advertisement') {
-            const target = label.closest('.w-full');
-            if (isSafeToHide(target)) hideElement(target);
-        }
-    });
+    for (let i = 0; i < triggers.length; i++) {
+      nukeAd(triggers[i]);
+    }
   }
 
-  let timeoutId = null;
-  const observer = new MutationObserver(() => {
-    if (!isEnabled) return;
-    if (timeoutId) clearTimeout(timeoutId);
-    timeoutId = setTimeout(scanDOM, 100);
-  });
+  let intervalId = null;
 
   function start() {
     injectCSS();
     scanDOM();
+    
+    if (intervalId) clearInterval(intervalId);
+    intervalId = setInterval(scanDOM, 100);
+
+    const observer = new MutationObserver(() => {
+      if (isEnabled) scanDOM();
+    });
+
     if (document.body) {
       observer.observe(document.body, { 
         childList: true, 
-        subtree: true, 
-        attributes: true, 
-        attributeFilter: ['style', 'class'] 
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['style', 'class']
       });
     }
   }
 
   function stop() {
     removeCSS();
-    observer.disconnect();
-    const hiddenEls = document.querySelectorAll('[data-cai-hidden="true"]');
-    hiddenEls.forEach(el => {
-      delete el.dataset.caiHidden;
-      el.style.display = '';
-    });
+    if (intervalId) clearInterval(intervalId);
+    const nuked = document.querySelectorAll('[data-cai-nuked="true"]');
+    for (let i = 0; i < nuked.length; i++) {
+      delete nuked[i].dataset.caiNuked;
+    }
   }
 
   chrome.storage.sync.get({ enabled: true }, (res) => {
@@ -134,11 +136,7 @@
       sendResponse({ count: hiddenCount, enabled: isEnabled });
     } else if (msg.type === 'SET_ENABLED') {
       isEnabled = msg.enabled;
-      if (isEnabled) {
-        start();
-      } else {
-        stop();
-      }
+      if (isEnabled) start(); else stop();
       sendResponse({ ok: true });
     }
     return true;
