@@ -16,15 +16,15 @@
     style.id = 'cai-ad-remover-css';
     style.textContent = `
       [id^="div-gpt-ad-"],
+      [aria-label="Hirdetés" i],
+      [aria-label="Advertisement" i],
+      [aria-label="Ads" i],
       iframe[src*="doubleclick.net"],
-      iframe[src*="googlesyndication.com"],
-      iframe[id^="google_ads_iframe_"] {
+      iframe[src*="googlesyndication.com"] {
         display: none !important;
+        visibility: hidden !important;
         opacity: 0 !important;
         pointer-events: none !important;
-        height: 0 !important;
-        width: 0 !important;
-        position: absolute !important;
       }
     `;
     document.documentElement.appendChild(style);
@@ -43,33 +43,24 @@
     notifyBackground();
   }
 
-  function getHighestSafeWrapper(el) {
-    let current = el;
-    let highestSafe = el;
+  function isSafeToHide(el) {
+    if (!el) return false;
+    if (el.tagName === 'BODY' || el.tagName === 'MAIN' || el.tagName === 'NAV') return false;
+    if (el.querySelector('main') || el.querySelector('nav') || el.querySelector('textarea')) return false;
+    if (el.querySelectorAll('a').length > 10) return false;
+    return true;
+  }
 
-    while (current) {
-      const parent = current.parentElement;
-      if (!parent) break;
+  function findSpecificWrapper(el) {
+    const labeled = el.closest('[aria-label="Hirdetés" i], [aria-label="Advertisement" i], [aria-label="Ads" i]');
+    if (labeled) return labeled;
 
-      const candidate = parent.closest('.w-full, .fixed');
-      if (!candidate) break;
-
-      if (
-        candidate.tagName === 'BODY' ||
-        candidate.tagName === 'MAIN' ||
-        candidate.querySelector('main') ||
-        candidate.querySelector('textarea') ||
-        candidate.querySelector('form') ||
-        candidate.closest('form')
-      ) {
-        break;
-      }
-
-      highestSafe = candidate;
-      current = candidate;
+    let parent = el.parentElement;
+    if (parent && parent.classList.contains('w-full') && isSafeToHide(parent)) {
+        return parent;
     }
-
-    return highestSafe;
+    
+    return el;
   }
 
   function scanDOM() {
@@ -77,12 +68,23 @@
 
     const gptSlots = document.querySelectorAll('[id^="div-gpt-ad-"]');
     gptSlots.forEach(slot => {
-      hideElement(getHighestSafeWrapper(slot));
+      const target = findSpecificWrapper(slot);
+      if (isSafeToHide(target)) hideElement(target);
     });
 
     const inHouseBanners = document.querySelectorAll('[style*="/in-house/"]');
     inHouseBanners.forEach(banner => {
-      hideElement(getHighestSafeWrapper(banner));
+      const target = findSpecificWrapper(banner);
+      if (isSafeToHide(target)) hideElement(target);
+    });
+
+    const labels = document.querySelectorAll('p, span, button');
+    labels.forEach(label => {
+        const txt = label.textContent.trim().toLowerCase();
+        if (txt === 'hirdetés' || txt === 'advertisement') {
+            const target = label.closest('.w-full');
+            if (isSafeToHide(target)) hideElement(target);
+        }
     });
   }
 
