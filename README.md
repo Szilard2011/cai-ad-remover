@@ -26,6 +26,13 @@ It is that simple!
 - Reads your chat messages
 - Sends any information to external sources
 
+## Mobile
+
+The extension does not work in the official app. 
+If you are on Android, try opening character.ai 
+in Kiwi Browser and load the extension the same 
+way you would on desktop.
+
 ## License
 
 MIT License
