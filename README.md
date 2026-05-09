@@ -6,7 +6,7 @@ Tired of getting ads from Character.AI at every five seconds? With this extensio
 
 Because it is not hosted on the Chrome Webstore, you need to manually install the extension. The whole process takes about 30 seconds.
 
-1. Download this repository as a ZIP file or the release as ZIP file (recommended) and extract it.
+1. Download this repository as a ZIP file or the release of cai-ad-remover.zip file (recommended) and extract it.
 2. Open up Chrome and navigate to `chrome://extensions`.
 3. Enable **Developer Mode** by clicking the button on the top right-hand side of the page.
 4. Click **Load Unpacked** and point to the folder where you have unzipped the files.
