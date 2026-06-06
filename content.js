@@ -46,18 +46,22 @@
 
       const tag = parent.tagName;
       if (tag === 'BODY' || tag === 'MAIN' || tag === 'NAV' || tag === 'ASIDE' || tag === 'SECTION') break;
-      
+
       if (parent.id && !parent.id.includes('gpt-ad')) break;
       if (parent.classList.contains('flex-1') || parent.classList.contains('grid')) break;
-      
+
       if (parent.querySelector('textarea') || parent.querySelector('form')) break;
       if (parent.querySelectorAll('img').length > 1) break;
       if (parent.querySelectorAll('a, button').length > 4) break;
       if (parent.textContent.length > 300) break;
 
-      if (parent.classList.contains('w-full') || parent.classList.contains('fixed') || parent.classList.contains('absolute')) {
+      if (
+        parent.classList.contains('w-full') ||
+        parent.classList.contains('fixed') ||
+        parent.classList.contains('absolute')
+      ) {
         bestWrapper = parent;
-        if (parent.classList.contains('fixed')) break;
+        if (parent.classList.contains('fixed') && !parent.classList.contains('inset-0')) break;
       }
 
       current = parent;
@@ -76,16 +80,39 @@
     }
   }
 
+  function nukeDialogAds() {
+    const dialogs = document.querySelectorAll('[role="dialog"][aria-modal="true"]');
+    dialogs.forEach(dialog => {
+      if (dialog.dataset.caiNuked) return;
+
+      const hasInHouse = dialog.querySelector('[style*="/in-house/"]');
+      const hasGpt = dialog.querySelector('[id^="div-gpt-ad-"]');
+
+      if (hasInHouse || hasGpt) {
+        dialog.dataset.caiNuked = "true";
+        hiddenCount++;
+        notifyBackground();
+
+        const backdrop = document.querySelector('button.fixed.inset-0[aria-label="Close"]');
+        if (backdrop && !backdrop.dataset.caiNuked) {
+          backdrop.dataset.caiNuked = "true";
+        }
+      }
+    });
+  }
+
   function scanDOM() {
     if (!isEnabled || !document.body) return;
 
     const triggers = document.querySelectorAll(
-      '[id^="div-gpt-ad-"], [style*="/in-house/"], iframe[src*="doubleclick.net"], iframe[src*="googlesyndication.com"]'
+      '[id^="div-gpt-ad-"], [style*="/in-house/"], iframe[src*="doubleclick.net"], iframe[src*="googlesyndication.com"], button.fixed.inset-0[aria-label="Close"]'
     );
 
     for (let i = 0; i < triggers.length; i++) {
       nukeAd(triggers[i]);
     }
+
+    nukeDialogAds();
   }
 
   let intervalId = null;
@@ -93,7 +120,7 @@
   function start() {
     injectCSS();
     scanDOM();
-    
+
     if (intervalId) clearInterval(intervalId);
     intervalId = setInterval(scanDOM, 100);
 
@@ -102,8 +129,8 @@
     });
 
     if (document.body) {
-      observer.observe(document.body, { 
-        childList: true, 
+      observer.observe(document.body, {
+        childList: true,
         subtree: true,
         attributes: true,
         attributeFilter: ['style', 'class']
