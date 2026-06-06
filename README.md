@@ -1,6 +1,6 @@
 # CAI Ad Remover
 
-Tired of getting ads from Character.AI at every five seconds? With this extension, they are all removed. Banner ads, sticky ads, CAI+ ads, and other third-party ads will be blocked.
+Tired of getting ads from Character.AI at every five seconds? With this extension, they are all removed. Banner ads, sticky ads, CAI+ ads.
 
 ## Installation guide
 
@@ -16,7 +16,6 @@ It is that simple!
 ## What it does
 
 - Blocks CAI+ ads
-- Blocks third-party ads
 - Keeps the chat screen free of any empty spaces
 - Has an options popup that lets you toggle between light and dark modes
 
