@@ -101,11 +101,34 @@
     });
   }
 
+  function nukeAdBreaks() {
+    const dialogs = document.querySelectorAll('div[role="dialog"]');
+    dialogs.forEach(dialog => {
+      if (dialog.dataset.caiNuked) return;
+
+      const hasAdBreakImg = dialog.querySelector('img[src*="ad-break-chat-entry-background"]');
+      const hasKeepChatting = dialog.textContent.includes('Keep chatting with ads');
+
+      if (hasAdBreakImg || hasKeepChatting) {
+        dialog.dataset.caiNuked = "true";
+        hiddenCount++;
+        notifyBackground();
+
+        const backdrop = document.querySelector('div.fixed.inset-0.z-50.bg-black\\/50');
+        if (backdrop && !backdrop.dataset.caiNuked) {
+          backdrop.dataset.caiNuked = "true";
+          hiddenCount++;
+          notifyBackground();
+        }
+      }
+    });
+  }
+
   function scanDOM() {
     if (!isEnabled || !document.body) return;
 
     const triggers = document.querySelectorAll(
-      '[id^="div-gpt-ad-"], [style*="/in-house/"], iframe[src*="doubleclick.net"], iframe[src*="googlesyndication.com"], button.fixed.inset-0[aria-label="Close"]'
+      '[id^="div-gpt-ad-"], [style*="/in-house/"], iframe[src*="doubleclick.net"], iframe[src*="googlesyndication.com"], button.fixed.inset-0[aria-label="Close"], #ad-break-toast-upcoming'
     );
 
     for (let i = 0; i < triggers.length; i++) {
@@ -113,6 +136,7 @@
     }
 
     nukeDialogAds();
+    nukeAdBreaks();
   }
 
   let intervalId = null;
